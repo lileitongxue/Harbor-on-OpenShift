@@ -15,8 +15,20 @@ oc create -f ./statefulset/statefulset.yaml <br>
 
 oc create -f ./configmap/cm.yaml <br>
 
-oc create -f ./secret/*.yaml <br>
+oc create -f ./secret/adminserver.yaml <br>
+
+oc create -f ./secret/jobservice.yaml <br>
+
+oc create -f ./secret/mysql.yaml <br>
+
+oc create -f ./secret/postgresql.yaml <br>
+
+oc create -f ./secret/registry.yaml <br>
+
+oc create -f ./secret/ui.yaml <br>
 
 oc create -f ./svc/svc.yaml <br>
 
-oc create -f ./route/route.yaml
+oc create -f ./route/route.yaml <br>
+
+4.目前这几个pod 都没有做数据的持久化，需要自己挂卷，Harbor的版本是v1.5.0，但是镜像是1.4.0的，我是按照git上的来做的，也问过Harbor官网的人。就是这样的。。。。。
