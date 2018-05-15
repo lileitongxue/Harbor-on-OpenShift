@@ -1,0 +1,363 @@
+apiVersion: v1
+items:
+- apiVersion: extensions/v1beta1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+    creationTimestamp: null
+    generation: 1
+    labels:
+      app: harbor
+      chart: harbor-0.1.1
+      component: clair
+      heritage: Tiller
+      release: harbor
+    name: harbor-harbor-clair
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: harbor
+        component: clair
+        release: harbor
+    strategy:
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 1
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: harbor
+          chart: harbor-0.1.1
+          component: clair
+          heritage: Tiller
+          release: harbor
+      spec:
+        containers:
+        - args:
+          - -insecure-tls
+          - -config
+          - /config/config.yaml
+          image: vmware/clair-photon:v2.0.1-v1.4.0
+          imagePullPolicy: IfNotPresent
+          name: clair
+          ports:
+          - containerPort: 6060
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /config/config.yaml
+            name: clair-config
+            subPath: config.yaml
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - configMap:
+            defaultMode: 420
+            items:
+            - key: config.yaml
+              path: config.yaml
+            name: harbor-harbor-clair
+          name: clair-config
+- apiVersion: extensions/v1beta1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "2"
+    creationTimestamp: null
+    generation: 2
+    labels:
+      app: harbor
+      chart: harbor-0.1.1
+      component: jobservice
+      heritage: Tiller
+      release: harbor
+    name: harbor-harbor-jobservice
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: harbor
+        component: jobservice
+        release: harbor
+    strategy:
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 1
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: harbor
+          chart: harbor-0.1.1
+          component: jobservice
+          heritage: Tiller
+          release: harbor
+      spec:
+        containers:
+        - env:
+          - name: LOG_LEVEL
+            value: info
+          - name: CONFIG_PATH
+            value: /etc/jobservice/app.conf
+          - name: GODEBUG
+            value: netdns=cgo
+          - name: ADMINSERVER_URL
+            value: http://harbor-harbor-adminserver
+          envFrom:
+          - secretRef:
+              name: harbor-harbor-jobservice
+          image: vmware/harbor-jobservice:v1.4.0
+          imagePullPolicy: IfNotPresent
+          name: jobservice
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /etc/jobservice/app.conf
+            name: jobservice-config
+            subPath: app.conf
+          - mountPath: /etc/jobservice/key
+            name: jobservice-secrets
+            subPath: key
+          - mountPath: /var/log/jobs
+            name: job-logs
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - configMap:
+            defaultMode: 420
+            name: harbor-harbor-jobservice
+          name: jobservice-config
+        - name: jobservice-secrets
+          secret:
+            defaultMode: 420
+            items:
+            - key: secretKey
+              path: key
+            secretName: harbor-harbor-jobservice
+        - emptyDir: {}
+          name: job-logs
+- apiVersion: extensions/v1beta1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+    creationTimestamp: null
+    generation: 1
+    labels:
+      app: harbor
+      chart: harbor-0.1.1
+      component: ui
+      heritage: Tiller
+      release: harbor
+    name: harbor-harbor-ui
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: harbor
+        component: ui
+        release: harbor
+    strategy:
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 1
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: harbor
+          component: ui
+          release: harbor
+      spec:
+        containers:
+        - env:
+          - name: UI_SECRET
+            valueFrom:
+              secretKeyRef:
+                key: secret
+                name: harbor-harbor-ui
+          - name: JOBSERVICE_SECRET
+            valueFrom:
+              secretKeyRef:
+                key: jobserviceSecret
+                name: harbor-harbor-ui
+          - name: GODEBUG
+            value: netdns=cgo
+          - name: LOG_LEVEL
+            value: debug
+          - name: CONFIG_PATH
+            value: /etc/ui/app.conf
+          - name: ENABLE_HARBOR_SCAN_ON_PUSH
+            value: "1"
+          - name: ADMINSERVER_URL
+            value: http://harbor-harbor-adminserver
+          - name: CLAIR_DB_HOST
+            value: harbor-harbor-clair-pg
+          image: vmware/harbor-ui:v1.4.0
+          imagePullPolicy: IfNotPresent
+          name: ui
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /etc/ui/app.conf
+            name: ui-config
+            subPath: app.conf
+          - mountPath: /etc/ui/key
+            name: ui-secrets-key
+            subPath: key
+          - mountPath: /etc/ui/private_key.pem
+            name: ui-secrets-private-key
+            subPath: private_key.pem
+          - mountPath: /etc/ui/ca
+            name: ca-download
+          - mountPath: /etc/ui/token
+            name: psc
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - configMap:
+            defaultMode: 420
+            name: harbor-harbor-ui
+          name: ui-config
+        - name: ui-secrets-key
+          secret:
+            defaultMode: 420
+            items:
+            - key: secretKey
+              path: key
+            secretName: harbor-harbor-ui
+        - name: ui-secrets-private-key
+          secret:
+            defaultMode: 420
+            items:
+            - key: private_key.pem
+              path: private_key.pem
+            secretName: harbor-harbor-ui
+        - emptyDir: {}
+          name: ca-download
+        - emptyDir: {}
+          name: psc
+- apiVersion: extensions/v1beta1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+    creationTimestamp: null
+    generation: 1
+    labels:
+      app: harbor-postgresql
+      chart: postgresql-0.9.1
+      heritage: Tiller
+      release: harbor
+    name: harbor-postgresql
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: harbor-postgresql
+    strategy:
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 1
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: harbor-postgresql
+      spec:
+        containers:
+        - env:
+          - name: POSTGRES_USER
+            value: clair
+          - name: PGUSER
+            value: clair
+          - name: POSTGRES_DB
+            value: clair
+          - name: POSTGRES_INITDB_ARGS
+          - name: PGDATA
+            value: /var/lib/postgresql/data/pgdata
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: postgres-password
+                name: harbor-postgresql
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.podIP
+          image: postgres:9.6.2
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            exec:
+              command:
+              - sh
+              - -c
+              - exec pg_isready --host $POD_IP
+            failureThreshold: 6
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          name: harbor-postgresql
+          ports:
+          - containerPort: 5432
+            name: postgresql
+            protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+              - sh
+              - -c
+              - exec pg_isready --host $POD_IP
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /var/lib/postgresql/data/pgdata
+            name: data
+            subPath: postgresql-db
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - emptyDir: {}
+          name: data
+kind: List
+metadata: {}

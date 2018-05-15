@@ -1,0 +1,185 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  data:
+    ADMIRAL_URL: NA
+    AUTH_MODE: db_auth
+    CFG_EXPIRATION: "5"
+    CLAIR_DB: clair
+    CLAIR_DB_HOST: harbor-postgresql
+    CLAIR_DB_PASSWORD: not-a-secure-password
+    CLAIR_DB_PORT: "5432"
+    CLAIR_DB_USERNAME: clair
+    DATABASE_TYPE: mysql
+    EMAIL_FROM: admin <sample_admin@mydomain.com>
+    EMAIL_HOST: smtp.mydomain.com
+    EMAIL_IDENTITY: ""
+    EMAIL_INSECURE: "False"
+    EMAIL_PORT: "25"
+    EMAIL_SSL: "false"
+    EMAIL_USR: sample_admin@mydomain.com
+    EXT_ENDPOINT: https://harbor.cloud.prd.asiainfo.com
+    GODEBUG: netdns=cgo
+    IMAGE_STORE_PATH: /
+    JOBSERVICE_URL: http://harbor-harbor-jobservice
+    LDAP_BASE_DN: ""
+    LDAP_FILTER: (objectClass=person)
+    LDAP_SCOPE: "2"
+    LDAP_SEARCH_DN: ""
+    LDAP_TIMEOUT: "5"
+    LDAP_UID: uid
+    LDAP_URL: ldaps://ldapserver
+    LDAP_VERIFY_CERT: "True"
+    LOG_LEVEL: info
+    MAX_JOB_WORKERS: "3"
+    MYSQL_DATABASE: registry
+    MYSQL_HOST: harbor-harbor-mysql
+    MYSQL_PORT: "3306"
+    MYSQL_USR: root
+    PROJECT_CREATION_RESTRICTION: everyone
+    REGISTRY_STORAGE_PROVIDER_NAME: filesystem
+    REGISTRY_URL: http://harbor-harbor-registry:5000
+    RESET: "false"
+    SELF_REGISTRATION: "on"
+    TOKEN_EXPIRATION: "30"
+    TOKEN_SERVICE_URL: http://harbor-harbor-ui/service/token
+    UAA_CLIENTID: ""
+    UAA_CLIENTSECRET: ""
+    UAA_ENDPOINT: ""
+    UAA_VERIFY_CERT: "True"
+    UI_URL: http://harbor-harbor-ui
+    VERIFY_REMOTE_CERT: "off"
+    WITH_CLAIR: "true"
+    WITH_NOTARY: "false"
+  kind: ConfigMap
+  metadata:
+    creationTimestamp: null
+    labels:
+      app: harbor
+      chart: harbor-0.1.1
+      component: adminserver
+      heritage: Tiller
+      release: harbor
+    name: harbor-harbor-adminserver
+- apiVersion: v1
+  data:
+    config.yaml: |
+      clair:
+        database:
+          type: pgsql
+          options:
+            source: "postgresql://clair:not-a-secure-password@harbor-postgresql:5432/clair?sslmode=disable"
+            # Number of elements kept in the cache
+            # Values unlikely to change (e.g. namespaces) are cached in order to save prevent needless roundtrips to the database.
+            cachesize: 16384
+
+        api:
+          # API server port
+          port: 6060
+          healthport: 6061
+
+          # Deadline before an API request will respond with a 503
+          timeout: 300s
+        updater:
+          interval: 12h
+
+        notifier:
+          attempts: 3
+          renotifyinterval: 2h
+          http:
+            endpoint: "http://harbor-harbor-ui/service/notifications/clair"
+  kind: ConfigMap
+  metadata:
+    creationTimestamp: null
+    labels:
+      app: harbor
+      chart: harbor-0.1.1
+      component: clair
+      heritage: Tiller
+      release: harbor
+    name: harbor-harbor-clair
+- apiVersion: v1
+  data:
+    app.conf: |
+      appname = jobservice
+      runmode = prod
+
+      [prod]
+      httpport = 8080
+  kind: ConfigMap
+  metadata:
+    creationTimestamp: null
+    labels:
+      app: harbor
+      chart: harbor-0.1.1
+      heritage: Tiller
+      release: harbor
+    name: harbor-harbor-jobservice
+- apiVersion: v1
+  data:
+    config.yml: |
+      version: 0.1
+      log:
+        level: info
+        fields:
+          service: registry
+      storage:
+        cache:
+          layerinfo: inmemory
+        filesystem:
+          rootdirectory: /var/lib/registry
+        maintenance:
+          uploadpurging:
+            enabled: false
+        delete:
+          enabled: true
+      http:
+        addr: :5000
+        # set via environment variable
+        # secret: placeholder
+        debug:
+          addr: localhost:5001
+      auth:
+        token:
+          issuer: harbor-token-issuer
+          realm: "https://harbor.cloud.prd.asiainfo.com/service/token"
+          rootcertbundle: /etc/registry/root.crt
+          service: harbor-registry
+
+      notifications:
+        endpoints:
+          - name: harbor
+            disabled: false
+            url: http://harbor-harbor-ui/service/notifications
+            timeout: 3000ms
+            threshold: 5
+            backoff: 1s
+  kind: ConfigMap
+  metadata:
+    creationTimestamp: null
+    labels:
+      app: harbor
+      chart: harbor-0.1.1
+      heritage: Tiller
+      release: harbor
+    name: harbor-harbor-registry
+- apiVersion: v1
+  data:
+    app.conf: |
+      appname = Harbor
+      runmode = prod
+      enablegzip = true
+
+      [prod]
+      httpport = 8080
+  kind: ConfigMap
+  metadata:
+    creationTimestamp: null
+    labels:
+      app: harbor
+      chart: harbor-0.1.1
+      heritage: Tiller
+      release: harbor
+    name: harbor-harbor-ui
+kind: List
+metadata: {}

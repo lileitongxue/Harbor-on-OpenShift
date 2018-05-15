@@ -1,0 +1,207 @@
+apiVersion: v1
+items:
+- apiVersion: apps/v1beta1
+  kind: StatefulSet
+  metadata:
+    creationTimestamp: null
+    generation: 1
+    labels:
+      app: harbor
+      chart: harbor-0.1.1
+      component: adminserver
+      heritage: Tiller
+      release: harbor
+    name: harbor-harbor-adminserver
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: harbor
+        component: adminserver
+        release: harbor
+    serviceName: harbor-harbor-adminserver
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: harbor
+          chart: harbor-0.1.1
+          component: adminserver
+          heritage: Tiller
+          release: harbor
+      spec:
+        containers:
+        - env:
+          - name: PORT
+            value: "8080"
+          - name: JSON_CFG_STORE_PATH
+            value: /etc/adminserver/config/config.json
+          - name: KEY_PATH
+            value: /etc/adminserver/key
+          envFrom:
+          - configMapRef:
+              name: harbor-harbor-adminserver
+          - secretRef:
+              name: harbor-harbor-adminserver
+          image: vmware/harbor-adminserver:v1.4.0
+          imagePullPolicy: IfNotPresent
+          name: adminserver
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /etc/adminserver/config
+            name: adminserver-config
+          - mountPath: /etc/adminserver/key
+            name: adminserver-key
+            subPath: key
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - emptyDir: {}
+          name: adminserver-config
+        - name: adminserver-key
+          secret:
+            defaultMode: 420
+            items:
+            - key: secretKey
+              path: key
+            secretName: harbor-harbor-adminserver
+- apiVersion: apps/v1beta1
+  kind: StatefulSet
+  metadata:
+    creationTimestamp: null
+    generation: 1
+    labels:
+      app: harbor
+      chart: harbor-0.1.1
+      component: mysql
+      heritage: Tiller
+      release: harbor
+    name: harbor-harbor-mysql
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: harbor
+        component: mysql
+        release: harbor
+    serviceName: harbor-harbor-mysql
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: harbor
+          chart: harbor-0.1.1
+          component: mysql
+          heritage: Tiller
+          release: harbor
+      spec:
+        containers:
+        - env:
+          - name: MYSQL_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: mysqlRootPassword
+                name: harbor-harbor-mysql
+          image: vmware/harbor-db:v1.4.0
+          imagePullPolicy: IfNotPresent
+          name: mysql
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /var/lib/mysql
+            name: mysql-data
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - emptyDir: {}
+          name: mysql-data
+- apiVersion: apps/v1beta1
+  kind: StatefulSet
+  metadata:
+    creationTimestamp: null
+    generation: 1
+    labels:
+      app: harbor
+      chart: harbor-0.1.1
+      component: registry
+      heritage: Tiller
+      release: harbor
+    name: harbor-harbor-registry
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: harbor
+        component: registry
+        release: harbor
+    serviceName: harbor-harbor-registry
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: harbor
+          chart: harbor-0.1.1
+          component: registry
+          heritage: Tiller
+          release: harbor
+      spec:
+        containers:
+        - args:
+          - serve
+          - /etc/registry/config.yml
+          env:
+          - name: REGISTRY_HTTP_SECRET
+            valueFrom:
+              secretKeyRef:
+                key: httpSecret
+                name: harbor-harbor-registry
+          image: vmware/registry-photon:v2.6.2-v1.4.0
+          imagePullPolicy: IfNotPresent
+          name: registry
+          ports:
+          - containerPort: 5000
+            protocol: TCP
+          - containerPort: 5001
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /var/lib/registry
+            name: registry-data
+          - mountPath: /etc/registry/root.crt
+            name: registry-root-certificate
+            subPath: root.crt
+          - mountPath: /etc/registry/config.yml
+            name: registry-config
+            subPath: config.yml
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - emptyDir: {}
+          name: registry-data
+        - name: registry-root-certificate
+          secret:
+            defaultMode: 420
+            secretName: harbor-harbor-registry
+        - configMap:
+            defaultMode: 420
+            name: harbor-harbor-registry
+          name: registry-config
+kind: List
+metadata: {}

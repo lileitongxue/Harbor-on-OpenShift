@@ -1,0 +1,145 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    labels:
+      app: harbor
+      chart: harbor-0.1.1
+      heritage: Tiller
+      release: harbor
+    name: clair
+  spec:
+    ports:
+    - port: 6060
+      protocol: TCP
+      targetPort: 6060
+    selector:
+      app: harbor
+      component: clair
+      release: harbor
+    sessionAffinity: None
+    type: ClusterIP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    name: harbor-harbor-adminserver
+  spec:
+    ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: harbor
+      component: adminserver
+      release: harbor
+    sessionAffinity: None
+    type: ClusterIP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    labels:
+      app: harbor
+      chart: harbor-0.1.1
+      heritage: Tiller
+      release: harbor
+    name: harbor-harbor-jobservice
+  spec:
+    ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: harbor
+      component: jobservice
+      release: harbor
+    sessionAffinity: None
+    type: ClusterIP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    labels:
+      app: harbor
+      chart: harbor-0.1.1
+      heritage: Tiller
+      release: harbor
+    name: harbor-harbor-mysql
+  spec:
+    ports:
+    - port: 3306
+      protocol: TCP
+      targetPort: 3306
+    selector:
+      app: harbor
+      component: mysql
+      release: harbor
+    sessionAffinity: None
+    type: ClusterIP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    labels:
+      app: harbor
+      chart: harbor-0.1.1
+      heritage: Tiller
+      release: harbor
+    name: harbor-harbor-registry
+  spec:
+    ports:
+    - port: 5000
+      protocol: TCP
+      targetPort: 5000
+    selector:
+      app: harbor
+      component: registry
+      release: harbor
+    sessionAffinity: None
+    type: ClusterIP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    labels:
+      app: harbor
+      chart: harbor-0.1.1
+      heritage: Tiller
+      release: harbor
+    name: harbor-harbor-ui
+  spec:
+    ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: harbor
+      component: ui
+      release: harbor
+    sessionAffinity: None
+    type: ClusterIP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    labels:
+      app: harbor-postgresql
+      chart: postgresql-0.9.1
+      heritage: Tiller
+      release: harbor
+    name: harbor-postgresql
+  spec:
+    ports:
+    - name: postgresql
+      port: 5432
+      protocol: TCP
+      targetPort: postgresql
+    selector:
+      app: harbor-postgresql
+    sessionAffinity: None
+    type: ClusterIP
+kind: List
+metadata: {}
